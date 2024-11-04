@@ -1,9 +1,22 @@
 "use strict";
 const bulb = `💡`;
 const bulb_div = document.getElementById('lightbulb');
-let pid = null;
+let pid;
 let vals = [.2, .3, .7, .8, .5];
 let enc = vals.map(mapValueToPixel);
+let panicking;
+let statusLabel = document.getElementById('status-label');
+let reminderTimeout;
+const reminderMessage = document.getElementById('reminder-message');
+function startReminderTimer() {
+    clearTimeout(reminderTimeout);
+    reminderTimeout = setTimeout(() => {
+        if (reminderMessage) {
+            reminderMessage.style.display = 'block';
+        }
+        panic();
+    }, 60000);
+}
 function flip() {
     if (bulb_div.innerHTML == bulb)
         return bulb_div.innerHTML = '';
@@ -30,6 +43,11 @@ function addPoint() {
     const ans = vals.map((v, i) => `<div class='point' style='margin-left:${(i + 1) * 125}px; top:${mapValueToPixel(v)}px'></div>`);
     console.log(ans, vals);
     pointsDiv.innerHTML = ans.join('');
+    checkval(val, vals);
+    if (reminderMessage) {
+        reminderMessage.style.display = 'none';
+    }
+    startReminderTimer();
     // const ar  = vals.map((v,i)=>`<div class='point' style='left:${i*50}px></div>"`)
     // console.log(ar)
     // document.getElementById("points-div")!.innerHTML=ar.join('');
@@ -59,11 +77,72 @@ function mapValueToPixel(value) {
 // }
 // addPoint()
 function panic() {
-    bulb_div.style.background = 'red';
-    pid = setInterval(() => { flip(); }, 300);
+    if (!panicking) {
+        bulb_div.style.background = 'red';
+        pid = setInterval(() => { flip(); }, 300);
+        panicking = true;
+    }
+}
+function checkval(val, vals) {
+    if (val < 0.1) {
+        panic();
+        if (statusLabel) {
+            statusLabel.textContent = "Loosen!";
+        }
+        return;
+    }
+    else if (val > 0.5) {
+        panic();
+        if (statusLabel) {
+            statusLabel.textContent = "Tighten!";
+        }
+        return;
+    }
+    else if (val < 0.2) {
+        calm();
+        bulb_div.style.background = 'yellow';
+        if (statusLabel) {
+            statusLabel.textContent = "Loosen";
+        }
+        if (vals[vals.length - 2] < 0.2) {
+            if (vals[vals.length - 2] >= 0.1) {
+                panic();
+                if (statusLabel) {
+                    statusLabel.textContent = "Loosen!";
+                }
+            }
+        }
+    }
+    else if (val > 0.4) {
+        calm();
+        bulb_div.style.background = 'yellow';
+        if (statusLabel) {
+            statusLabel.textContent = "Tighten";
+        }
+        if (vals[vals.length - 2] > 0.4) {
+            if (vals[vals.length - 2] <= 0.5) {
+                panic();
+                if (statusLabel) {
+                    statusLabel.textContent = "Tighten!";
+                }
+            }
+        }
+    }
+    else {
+        calm();
+        if (statusLabel) {
+            statusLabel.textContent = "all good";
+        }
+    }
 }
 function calm() {
+    if (pid !== undefined) {
+        clearInterval(pid);
+        pid = undefined;
+    }
     bulb_div.style.background = 'transparent';
+    panicking = false;
+    return bulb_div.innerHTML = bulb;
 }
 // panic()
 // calm()
